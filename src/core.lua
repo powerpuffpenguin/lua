@@ -51,17 +51,34 @@ local function classNewIndex(self, key, value)
     rawset(self, key, value)
 end
 
+--- If self is an instance on the type inheritance chain, return true, otherwise return false
+---@param t Class
+---@return boolean
+local function instanceof(self, t)
+    while self do
+        if getmetatable(self) == t then
+            return true
+        end
+        self = self.super
+    end
+    return false
+end
+--- If self is an instance of the type, return true, otherwise return false
+---@param t Class
+---@return boolean
+local function typeof(self, t)
+    return getmetatable(self) == t
+end
+
 --- The base class provides some common methods for all classes
 ---@class Object : Class
 ---@field protected __class string
 ---@field protected __setter table
 ---@field protected __getter table
 ---@field protected super nil
----@field public toString fun():string
 local Object
 
 --- Create a type
----@overload fun(className:string):Class
 ---@param className string
 ---@return Class
 local function class(className)
@@ -103,19 +120,17 @@ end
 ---@param t Class
 ---@return boolean
 function Object:instanceof(t)
-    while self do
-        if getmetatable(self) == t then
-            return true
-        end
-        self = self.super
-    end
-    return false
+    return instanceof(self, t)
 end
 --- If self is an instance of the type, return true, otherwise return false
 ---@param t Class
 ---@return boolean
 function Object:typeof(t)
     return getmetatable(self) == t
+end
+
+function Object:toString()
+    return self.__class
 end
 
 --- Base class for all runtime errors
@@ -131,30 +146,36 @@ function Error.new(message)
         nil,
         {
             name = "Error",
-            message = message
+            message = message or ""
         }
     )
 end
 function Error:toString()
     return self.name .. ": " .. self.message
 end
+---@class TypeError : Error
 local TypeError = class("TypeError")
+--- new TypeError()
+---@param message string
+---@return TypeError
 function TypeError.new(message)
-    return Error:__extends(
-        nil,
+    return TypeError:__extends(
+        Error.new(message),
         {
-            name = "TypeError",
-            message = message
+            name = "TypeError"
         }
     )
 end
+---@class RangeError : Error
 local RangeError = class("RangeError")
+--- new RangeError()
+---@param message string
+---@return RangeError
 function RangeError.new(message)
-    return Error:__extends(
-        nil,
+    return RangeError:__extends(
+        Error.new(message),
         {
-            name = "RangeError",
-            message = message
+            name = "RangeError"
         }
     )
 end
@@ -261,6 +282,8 @@ end
 
 return {
     class = class,
+    typeof = typeof,
+    instanceof = instanceof,
     Object = Object,
     Error = Error,
     TypeError = TypeError,
